@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Daily Duty Manager</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #4f46e5;
+            --background: #f8fafc;
+            --text: #1e293b;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: 1fr 1fr auto;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 640px) {
+            .input-group {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        input, select, button {
+            padding: 0.75rem 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: var(--secondary);
+            transform: translateY(-1px);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 2rem 0;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-icon {
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-edit {
+            background: #eab308;
+        }
+
+        .btn-delete {
+            background: var(--danger);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(100%);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .stats {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .stat-box {
+            padding: 1rem;
+            background: #f1f5f9;
+            border-radius: 0.5rem;
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 400px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .clock-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .clock {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .clear-confirm {
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📅 Duty Manager</h1>
+        <div class="clock-container">
+            <div class="clock" id="clock">Loading...</div>
+            <button onclick="confirmClearData()">Clear All Data</button>
+        </div>
+        <div class="input-group">
+            <input type="date" id="dutyDate">
+            <select id="dutyShift">
+                <option value="Morning">Morning Shift</option>
+                <option value="Day">Day Shift</option>
+                <option value="Night">Night Shift</option>
+            </select>
+            <button onclick="handleDuty()">Add Duty</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div>Total Duties</div>
+                <div id="totalDuties">0</div>
+            </div>
+            <div class="stat-box">
+                <div>This Month</div>
+                <div id="monthDuties">0</div>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Shift</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="dutyList"></tbody>
+            </table>
+        </div>
+
+        <div class="input-group">
+            <input type="month" id="exportMonth">
+            <button onclick="exportToPDF()">📄 Export PDF</button>
+            <button onclick="exportData()">📤 Export JSON</button>
+            <button onclick="showImport()">📥 Import JSON</button>
+        </div>
+    </div>
+
+    <div class="modal" id="importModal">
+        <div class="modal-content">
+            <h3>Import Data</h3>
+            <input type="file" id="importFile" accept=".json">
+            <button onclick="importData()">Import</button>
+            <button onclick="hideModal()">Cancel</button>
+        </div>
+    </div>
+
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <h3>Confirm Clear Data</h3>
+            <p>Are you sure you want to clear all data? This action cannot be undone.</p>
+            <div class="clear-confirm">
+                <button onclick="clearAllData()">Yes, Clear Data</button>
+                <button onclick="hideModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        let editingId = null;
+
+        // Initialize
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("dutyDate").value = new Date().toISOString().split("T")[0];
+            refreshDuties();
+            startClock();
+        });
+
+        // Clock functionality
+        function startClock() {
+            const clockElement = document.getElementById("clock");
+            function updateClock() {
+                const now = new Date();
+                const date = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                const time = now.toLocaleTimeString();
+                clockElement.textContent = `${time} - ${date}`;
+            }
+            setInterval(updateClock, 1000);
+            updateClock();
+        }
+
+        // Unified duty handler
+        function handleDuty() {
+            const date = document.getElementById("dutyDate").value;
+            const shift = document.getElementById("dutyShift").value;
+
+            const duties = JSON.parse(localStorage.getItem("duties")) || [];
+            const isDuplicate = duties.some(d => d.date === date && d.shift === shift);
+
+            if (isDuplicate) {
+                showToast("Duplicate entry: Same date and shift already exists.");
+                return;
+            }
+
+            const duty = {
+                id: Date.now(),
+                date,
+                shift
+            };
+
+            if (editingId !== null) {
+                // Edit existing duty
+                const index = duties.findIndex(d => d.id === editingId);
+                if (index > -1) {
+                    duties[index] = duty;
+                    localStorage.setItem("duties", JSON.stringify(duties));
+                    editingId = null;
+                    showToast("Duty updated successfully!");
+                }
+            } else {
+                // Add new duty
+                duties.push(duty);
+                localStorage.setItem("duties", JSON.stringify(duties));
+                showToast("Duty added successfully!");
+            }
+
+            refreshDuties();
+        }
+
+        // Refresh duties list
+        function refreshDuties() {
+            const duties = JSON.parse(localStorage.getItem("duties")) || [];
+            const dutyList = document.getElementById("dutyList");
+            dutyList.innerHTML = "";
+
+            duties.forEach(duty => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${new Date(duty.date).toLocaleDateString()}</td>
+                    <td>${duty.shift}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-icon btn-edit" onclick="editDuty(${duty.id})">Edit</button>
+                            <button class="btn-icon btn-delete" onclick="deleteDuty(${duty.id})">Delete</button>
+                        </div>
+                    </td>
+                `;
+                dutyList.appendChild(row);
+            });
+
+            document.getElementById("totalDuties").textContent = duties.length;
+            const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+            const monthDuties = duties.filter(d => new Date(d.date).toLocaleString('default', { month: 'long' }) === currentMonth).length;
+            document.getElementById("monthDuties").textContent = monthDuties;
+        }
+
+        // Edit duty
+        function editDuty(id) {
+            const duties = JSON.parse(localStorage.getItem("duties")) || [];
+            const duty = duties.find(d => d.id === id);
+            if (duty) {
+                editingId = id;
+                document.getElementById("dutyDate").value = duty.date;
+                document.getElementById("dutyShift").value = duty.shift;
+            }
+        }
+
+        // Delete duty
+        function deleteDuty(id) {
+            const duties = JSON.parse(localStorage.getItem("duties")) || [];
+            const updatedDuties = duties.filter(d => d.id !== id);
+            localStorage.setItem("duties", JSON.stringify(updatedDuties));
+            refreshDuties();
+            showToast("Duty deleted successfully!");
+        }
+
+        // Show toast notification
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.classList.add("show");
+            setTimeout(() => toast.classList.remove("show"), 3000);
+        }
+
+        // Export to PDF
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const duties = JSON.parse(localStorage.getItem("duties")) || [];
+            if (duties.length === 0) {
+                showToast("No data available to export.");
+                return;
+            }
+
+            const tableData = duties.map(d => [new Date(d.date).toLocaleDateString(), d.shift]);
+
+            doc.autoTable({
+                head: [["Date", "Shift"]],
+                body: tableData,
+                startY: 20,
+                theme: 'grid',
+                styles: { fontSize: 10 },
+                headStyles: { fillColor: [102, 102, 241] },
+                margin: { top: 10 }
+            });
+
+            doc.text("Duty List", 14, 10);
+            doc.save("duties.pdf");
+        }
+
+        // Export data as JSON
+        function exportData() {
+            const duties = JSON.parse(localStorage.getItem("duties")) || [];
+            const json = JSON.stringify(duties, null, 2);
+            const blob = new Blob([json], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "duties.json";
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Show import modal
+        function showImport() {
+            document.getElementById("importModal").style.display = "flex";
+        }
+
+        // Hide modal
+        function hideModal() {
+            document.querySelectorAll(".modal").forEach(modal => modal.style.display = "none");
+        }
+
+        // Import data from JSON
+        function importData() {
+            const fileInput = document.getElementById("importFile");
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    localStorage.setItem("duties", JSON.stringify(importedData));
+                    refreshDuties();
+                    showToast("Data imported successfully!");
+                } catch (error) {
+                    showToast("Invalid file format.");
+                }
+            };
+            reader.readAsText(file);
+            hideModal();
+        }
+
+        // Confirm clear data
+        function confirmClearData() {
+            document.getElementById("confirmModal").style.display = "flex";
+        }
+
+        // Clear all data
+        function clearAllData() {
+            localStorage.removeItem("duties");
+            refreshDuties();
+            showToast("All data cleared successfully!");
+            hideModal();
+        }
+    </script>
+</body>
+</html>
