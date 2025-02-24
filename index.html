@@ -209,9 +209,13 @@
         <div class="input-group">
             <input type="date" id="dutyDate">
             <select id="dutyShift">
-                <option value="Morning">Morning Shift</option>
-                <option value="Day">Day Shift</option>
-                <option value="Night">Night Shift</option>
+                
+select id="shift-select">
+                    <option value="">Select Shift</option>
+                    <option value="morning">Morning (6 AM - 2 PM)</option>
+                    <option value="general">General (10 AM - 6 PM)</option>
+                    <option value="day">Day (2 PM - 10 PM)</option>
+                    <option value="night">Night (10 PM - 6 AM)</option>
             </select>
             <button onclick="handleDuty()">Add Duty</button>
         </div>
