@@ -197,25 +197,40 @@
         .clear-confirm {
             margin-top: 1rem;
         }
+
+        .ot-hours-container {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1></h1>🗓️ Duty Management Pro</h1>
+        <h1>🗓️ Duty Manager Pro</h1>
         <div class="clock-container">
             <div class="clock" id="clock">Loading...</div>
             <button onclick="confirmClearData()">Clear All Data</button>
         </div>
         <div class="input-group">
             <input type="date" id="dutyDate">
-            <select id="dutyShift">
-                
-
-                    <option value="">Select Shift</option>
-                    <option value="morning">Morning (6 AM - 2 PM)</option>
-                    <option value="General">General (10 AM - 6 PM)</option>
-                    <option value="day">Day (2 PM - 10 PM)</option>
-                    <option value="night">Night (10 PM - 6 AM)</option>
+            <select id="dutyShift" onchange="toggleOtHours()">
+                <option value="">Select Shift Type</option>
+                <option value="Morning">Morning (6 AM - 2 PM)</option>
+                <option value="General">General (10 AM - 6 PM)</option>
+                <option value="Day">Day (2 PM - 10 PM)</option>
+                <option value="Night">Night (10 PM - 6 AM)</option>
+                <option value="Morning-ot">Morning OT (6 AM - 2 PM)</option>
+                <option value="Day-ot">Day OT (2 PM - 10 PM)</option>
+                <option value="Night-ot">Night OT (10 PM - 6 AM)</option>
+            </select>
+            <select id="otHours" class="ot-hours-container">
+                <option value="0">Select OT Hours</option>
+                <option value="1">1 Hour OT</option>
+                <option value="2">2 Hours OT</option>
+                <option value="3">3 Hours OT</option>
+                <option value="4">4 Hours OT</option>
+                <option value="5">5 Hours OT</option>
+                <option value="6">6 Hours OT</option>
+                <option value="7">7 Hours OT</option>
             </select>
             <button onclick="handleDuty()">Add Duty</button>
         </div>
@@ -299,10 +314,27 @@
             updateClock();
         }
 
+        // Toggle OT hours visibility
+        function toggleOtHours() {
+            const shiftSelect = document.getElementById("dutyShift");
+            const otHoursContainer = document.getElementById("otHours");
+            otHoursContainer.style.display = shiftSelect.value.includes("-ot") ? "block" : "none";
+            
+            if (!shiftSelect.value.includes("-ot")) {
+                otHoursContainer.value = "0";
+            }
+        }
+
         // Unified duty handler
         function handleDuty() {
             const date = document.getElementById("dutyDate").value;
             const shift = document.getElementById("dutyShift").value;
+            const otHours = document.getElementById("otHours").value;
+
+            if (shift.includes("-ot") && otHours === "0") {
+                showToast("Please select OT hours for OT shifts");
+                return;
+            }
 
             const duties = JSON.parse(localStorage.getItem("duties")) || [];
             const isDuplicate = duties.some(d => d.date === date && d.shift === shift);
@@ -315,7 +347,8 @@
             const duty = {
                 id: Date.now(),
                 date,
-                shift
+                shift,
+                otHours: shift.includes("-ot") ? parseInt(otHours) : 0
             };
 
             if (editingId !== null) {
@@ -345,9 +378,14 @@
 
             duties.forEach(duty => {
                 const row = document.createElement("tr");
+                let shiftDisplay = duty.shift.replace("-ot", " OT");
+                if (duty.otHours > 0) {
+                    shiftDisplay += ` (${duty.otHours} hour${duty.otHours > 1 ? 's' : ''})`;
+                }
+                
                 row.innerHTML = `
                     <td>${new Date(duty.date).toLocaleDateString()}</td>
-                    <td>${duty.shift}</td>
+                    <td>${shiftDisplay}</td>
                     <td>
                         <div class="actions">
                             <button class="btn-icon btn-edit" onclick="editDuty(${duty.id})">Edit</button>
@@ -372,6 +410,8 @@
                 editingId = id;
                 document.getElementById("dutyDate").value = duty.date;
                 document.getElementById("dutyShift").value = duty.shift;
+                document.getElementById("otHours").value = duty.otHours;
+                toggleOtHours();
             }
         }
 
@@ -403,7 +443,10 @@
                 return;
             }
 
-            const tableData = duties.map(d => [new Date(d.date).toLocaleDateString(), d.shift]);
+            const tableData = duties.map(d => [
+                new Date(d.date).toLocaleDateString(),
+                d.shift.replace("-ot", " OT") + (d.otHours > 0 ? ` (${d.otHours}h)` : '')
+            ]);
 
             doc.autoTable({
                 head: [["Date", "Shift"]],
@@ -477,8 +520,8 @@
         }
     </script>
 
-<footer style="text-align: center; padding: 10px; background: #333; color: white;">
-    &copy; 2025 Chandan Ruidas. All rights reserved.
-</footer>
+    <footer style="text-align: center; padding: 10px; background: #333; color: white;">
+        &copy; 2025 Chandan Ruidas. All rights reserved.
+    </footer>
 </body>
 </html>
